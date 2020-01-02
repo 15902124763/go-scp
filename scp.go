@@ -2,13 +2,13 @@ package main
 
 import (
 	"fmt"
+	"github.com/yarm/go-scp/connect"
+	"github.com/yarm/go-scp/file"
 	"log"
 	"net"
 	"os"
 	"path"
 	"time"
-	"yarm.yang/scp/connect"
-	"yarm.yang/scp/file"
 
 	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"

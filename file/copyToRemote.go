@@ -2,10 +2,10 @@ package file
 
 import (
 	"github.com/pkg/sftp"
+	"github.com/yarm/go-scp/connect"
 	"log"
 	"os"
 	"path"
-	"yarm.yang/scp/connect"
 )
 
 func ScpSsh(localFilePath, remoteDir string, conn connect.Conn) error {
@@ -13,6 +13,9 @@ func ScpSsh(localFilePath, remoteDir string, conn connect.Conn) error {
 		client *sftp.Client
 		err        error
 	)
+
+	// 连接
+	client, err = connect.SftpSsh(conn)
 
 	if err != nil {
 		log.Println("scpCopy:", err)
