@@ -1,132 +1,14 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
+	"github.com/pkg/errors"
 	"github.com/yarm/go-scp/connect"
 	"github.com/yarm/go-scp/file"
-	"log"
-	"net"
 	"os"
-	"path"
-	"time"
-
-	"github.com/pkg/sftp"
-	"golang.org/x/crypto/ssh"
+	"strings"
 )
-func sshconnect(user, password, host string, port int) (*ssh.Session, error) {
-	var (
-		auth         []ssh.AuthMethod
-		addr         string
-		clientConfig *ssh.ClientConfig
-		client       *ssh.Client
-		session      *ssh.Session
-		err          error
-	)
-	// get auth method
-	auth = make([]ssh.AuthMethod, 0)
-	auth = append(auth, ssh.Password(password))
-
-	clientConfig = &ssh.ClientConfig{
-		User:    user,
-		Auth:    auth,
-		Timeout: 30 * time.Second,
-	}
-
-	// connet to ssh
-	addr = fmt.Sprintf("%s:%d", host, port)
-
-	if client, err = ssh.Dial("tcp", addr, clientConfig); err != nil {
-		return nil, err
-	}
-
-	// create session
-	if session, err = client.NewSession(); err != nil {
-		return nil, err
-	}
-
-	return session, nil
-}
-
-func sftpconnect(user, password, host string, port int) (*sftp.Client, error) {
-	var (
-		auth         []ssh.AuthMethod
-		addr         string
-		clientConfig *ssh.ClientConfig
-		sshClient    *ssh.Client
-		sftpClient   *sftp.Client
-		err          error
-	)
-	// get auth method
-	auth = make([]ssh.AuthMethod, 0)
-	auth = append(auth, ssh.Password(password))
-
-	clientConfig = &ssh.ClientConfig{
-		User:    user,
-		Auth:    auth,
-		Timeout: 30 * time.Second,
-		//这个是问你要不要验证远程主机，以保证安全性。这里不验证
-		HostKeyCallback: func(hostname string, remote net.Addr, key ssh.PublicKey) error {
-			return nil
-		},
-	}
-
-	// connet to ssh
-	addr = fmt.Sprintf("%s:%d", host, port)
-
-	if sshClient, err = ssh.Dial("tcp", addr, clientConfig); err != nil {
-		return nil, err
-	}
-
-	// create sftp client
-	if sftpClient, err = sftp.NewClient(sshClient); err != nil {
-		return nil, err
-	}
-
-	return sftpClient, nil
-}
-
-
-//单个copy
-func scpCopy(localFilePath, remoteDir string) error {
-	var (
-		sftpClient *sftp.Client
-		err        error
-	)
-	// 这里换成实际的 SSH 连接的 用户名，密码，主机名或IP，SSH端口
-	sftpClient, err = sftpconnect("root", "qw@123456", "180.76.159.196", 22)
-	if err != nil {
-		log.Println("scpCopy:", err)
-		return err
-	}
-	defer sftpClient.Close()
-	srcFile, err := os.Open(localFilePath)
-	if err != nil {
-		log.Println("scpCopy:", err)
-		return err
-	}
-	defer srcFile.Close()
-
-
-	var remoteFileName = path.Base(localFilePath)
-	dstFile, err := sftpClient.Create(path.Join(remoteDir, remoteFileName))
-	if err != nil {
-		log.Println("scpCopy:", err)
-		return err
-	}
-	defer dstFile.Close()
-
-	buf := make([]byte, 1024)
-	for {
-		n, _ := srcFile.Read(buf)
-		if n == 0 {
-			break
-		}
-
-		dstFile.Write(buf[0:n])
-	}
-	return nil
-}
-
 
 func main() {
 
@@ -137,12 +19,82 @@ func main() {
 	//}
 	//scpCopy("D:/temp/copy/rrr.txt", "/usr/local/src/")
 
-	conn := connect.Conn{
-		Host:     "you_ip",
-		Port:     22,
-		User:     "root",
-		Password: "you_password",
+	str := "&"
+	for index := range str {
+		fmt.Println( str[index])
 	}
 
-	file.ScpSsh("D:/temp/copy/rrr.txt", "/usr/local/src/", conn)
+	// 解析入参
+	inputArgs, err := getOsArgs()
+	if err != nil{
+		fmt.Println(err)
+		return
+	}
+
+	file.ScpSsh("./temp/out.txt", "/usr/local/src/", inputArgs.Conn)
+}
+
+func getOsArgs() (inputArgs InputArgs, err error){
+	args := os.Args
+	fmt.Println("命令行的参数有", len(args))
+	// 遍历 os.Args 切片，就可以得到所有的命令行输入参数值
+	for i, v := range args {
+		fmt.Printf("args[%v]=%v\n", i, v)
+	}
+
+	len := len(args)
+
+	if(len < 3){
+		help()
+		return inputArgs, errors.New("error:输入参数格式错误")
+	}
+
+	if args[1] == "-R"{
+		fmt.Println("ok")
+		inputArgs.LocalFilePath = args[2]
+		inputArgs = remoteArgs(args[3], inputArgs)
+		fmt.Println(inputArgs)
+	}
+
+	fmt.Println(inputArgs)
+
+	fmt.Println("input password:")
+	Stdin := os.Stdin
+	input := bufio.NewScanner(Stdin)
+	input.Scan()
+	inputPassWord := input.Text()
+
+	inputArgs.Conn.Password = inputPassWord
+
+	return inputArgs, nil
+}
+
+func remoteArgs(s string, args InputArgs) (inputArgs InputArgs){
+	userName := ""
+	arrLeft := strings.Split(s, "@")
+	userName = arrLeft[0]
+	inputArgs.Conn.User = userName
+	fmt.Println("userName:", userName)
+
+	fmt.Println(arrLeft[1])
+	arrRight := strings.Split(arrLeft[1], ":")
+	inputArgs.Conn.Host = arrRight[0]
+	inputArgs.RemoteDir = arrRight[1]
+	return inputArgs
+}
+
+// 帮助文档
+func help()  {
+	fmt.Println("\nExample:\n")
+	fmt.Println("scp -R /usr/local/upload.txt root@youId:/opt/src/","\n")
+	fmt.Println("scp:输入命令","\n")
+	fmt.Println("-R:指定的文件夹，不填默认是当前路径","\n")
+	fmt.Println("root@youId:用户名和ip","\n")
+	fmt.Println("/opt/src/:远程服务器文件夹路径","\n")
+}
+
+type InputArgs struct {
+	Conn connect.Conn
+	LocalFilePath string
+	RemoteDir string
 }
