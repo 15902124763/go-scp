@@ -137,12 +137,11 @@ func main() {
 	//}
 	//scpCopy("D:/temp/copy/rrr.txt", "/usr/local/src/")
 
-	// "root", "qw@123456", "180.76.159.196", 22
 	conn := connect.Conn{
-		Host:     "180.76.159.196",
+		Host:     "you_ip",
 		Port:     22,
 		User:     "root",
-		Password: "qw@123456",
+		Password: "you_password",
 	}
 
 	file.ScpSsh("D:/temp/copy/rrr.txt", "/usr/local/src/", conn)
