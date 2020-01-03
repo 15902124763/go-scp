@@ -40,9 +40,8 @@ vendor
 # Bindata
 # assets/assets.go
 # template/template.go
-/go-learning
 .settings
 app
 .vscode
-
+.scp.exe
 
