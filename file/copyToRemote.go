@@ -6,12 +6,13 @@ import (
 	"log"
 	"os"
 	"path"
+	"strings"
 )
 
 func ScpSsh(localFilePath, remoteDir string, conn connect.Conn) error {
 	var (
 		client *sftp.Client
-		err        error
+		err    error
 	)
 
 	// 连接
@@ -30,8 +31,7 @@ func ScpSsh(localFilePath, remoteDir string, conn connect.Conn) error {
 	}
 	defer srcFile.Close()
 
-
-	var remoteFileName = path.Base(localFilePath)
+	var remoteFileName = Base4Windows(localFilePath)
 	dstFile, err := client.Create(path.Join(remoteDir, remoteFileName))
 	if err != nil {
 		log.Println("scpCopy:", err)
@@ -51,3 +51,30 @@ func ScpSsh(localFilePath, remoteDir string, conn connect.Conn) error {
 	return nil
 }
 
+func Base4Windows(dir string) string {
+	if strings.Contains(dir, "/") {
+
+		return path.Base(dir)
+	} else {
+		return base(dir)
+	}
+}
+
+func base(path string) string {
+	if path == "" {
+		return "."
+	}
+	// Strip trailing slashes.
+	for len(path) > 0 && path[len(path)-1] == '\\' {
+		path = path[0 : len(path)-1]
+	}
+	// Find the last element
+	if i := strings.LastIndex(path, "\\"); i >= 0 {
+		path = path[i+1:]
+	}
+	// If empty now, it had only slashes.
+	if path == "" {
+		return "\\"
+	}
+	return path
+}

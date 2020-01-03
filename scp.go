@@ -9,6 +9,7 @@ import (
 	"github.com/yarm/go-scp/file"
 	"os"
 	"strings"
+	"time"
 )
 
 func main() {
@@ -37,9 +38,10 @@ func main() {
 
 	b.SetSpeedSection(10, 100)
 	for {
-		b.Add()
 		// 执行上传
 		file.ScpSsh(inputArgs.LocalFilePath, inputArgs.RemoteDir, inputArgs.Conn)
+		b.Add()
+		time.Sleep(1)
 		return
 	}
 }
